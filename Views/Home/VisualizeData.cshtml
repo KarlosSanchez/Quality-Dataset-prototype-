@@ -1,0 +1,139 @@
+﻿@using System.IO
+
+@{
+    ViewBag.Title = "Visualizacion de Datos";
+    System.Diagnostics.Debug.WriteLine("Contenido de ViewBag.ImagePaths:");
+
+    // Ruta del archivo fijo de LOGS
+    string directorio = "C:\\utpl\\UTPL 2024\\Tesis\\DataSets\\Logs";
+    string parteNombreArchivo = ViewBag.FileName;
+    System.Diagnostics.Debug.WriteLine("ParteNombreArchivo; " + parteNombreArchivo);
+
+    string[] archivos = Directory.GetFiles(directorio, $"*{parteNombreArchivo}*");
+    System.Diagnostics.Debug.WriteLine("Archivos encontrados antes del filtro: " + string.Join(", ", archivos));
+
+    archivos = archivos.Where(archivo => !archivo.Contains("QualityDataset_")).ToArray();
+    System.Diagnostics.Debug.WriteLine("Archivos después del filtro: " + string.Join(", ", archivos));
+
+    //System.Diagnostics.Debug.WriteLine("ParteNombreArchivo:"+ parteNombreArchivo);
+    //System.Diagnostics.Debug.WriteLine("archivos:" + string.Join(", ", archivos));
+
+    if (archivos.Length > 0)
+    {
+        // Obtener el archivo más reciente
+        string filePath = archivos.OrderByDescending(f => new FileInfo(f).LastWriteTime).First();
+        System.Diagnostics.Debug.WriteLine("Ultimo archivo >0: " + filePath);
+        string[] lineas = System.IO.File.ReadAllLines(filePath);
+        System.Diagnostics.Debug.WriteLine("Lineas >0: " + string.Join(", ", lineas));
+        ViewBag.UltimasLineas = lineas.Skip(Math.Max(0, lineas.Length - 5)).ToArray();
+        ViewBag.FechaArchivo = new FileInfo(filePath).LastWriteTime.ToString("dd/MM/yyyy HH:mm");
+    }
+    else
+    {
+        ViewBag.UltimasLineas = new string[] { "No se encontro el archivo de Errores, ejecute el prototipo." };
+        ViewBag.FechaArchivo = "N/A";
+    }
+}
+
+<h2>Visualización de Datos - @ViewBag.FileName</h2>
+
+ @if (ViewBag.Error != null)
+{
+    <p style="color:red;">@ViewBag.Error</p>
+}
+else
+{
+    <form method="post" asp-action="VisualizeData" onsubmit="return validateSelection()">
+        <input type="hidden" name="filePath" value="@ViewBag.FilePath" />
+        <label for="columns">Columnas para graficar :  </label>
+        @if (ViewBag.Columns != null && ViewBag.Columns.Count > 0)
+        {
+            <select id="columns" name="columns" multiple>
+                @foreach (var column in ViewBag.Columns)
+                {
+                    <option value="@column" selected="@(ViewBag.SelectedColumns != null && ((string[])ViewBag.SelectedColumns).Contains((string)column) ? "selected" : "")">@column</option>
+                }
+            </select>
+            <button type="submit">Generar Grafico</button>
+            <script>
+                function validateSelection() {
+                    var select = document.getElementById('columns');
+                    var selectedOptions = Array.from(select.selectedOptions).map(option => option.value);
+
+                    if (selectedOptions.length === 2) {
+                        // Crea un input oculto para enviar solo las dos columnas seleccionadas
+                        var hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'selectedColumns';
+                        hiddenInput.value = JSON.stringify(selectedOptions);
+                        document.forms[0].appendChild(hiddenInput);
+                    }
+
+                    return true; // Permite el envío del formulario
+                }
+            </script>
+        }
+        else
+        {
+            <p>No hay columnas disponibles para visualizar.</p>
+        }
+    </form>
+
+
+    <div id="progress-container" style="display:none;">
+        <label for="progress">Cargando gráfico:</label>
+        <progress id="progress" value="0" max="100"></progress>
+    </div> 
+
+     @if (ViewBag.ImagePaths != null && ViewBag.ImagePaths.Count > 0)
+    {
+        foreach (var imagePath in ViewBag.ImagePaths)
+        {
+            <img src="@imagePath" alt="Gráfico" style="width:auto; height:auto;" onload="hideProgressBar()" />
+        }
+    } 
+
+
+@*@if (ViewBag.ScriptResult != null)
+{
+    <h3>Resultado del Script Python:</h3>
+    <pre>@ViewBag.ScriptResult</pre>
+}
+
+
+  @if (ViewBag.UltimasLineas != null && ViewBag.FileName.Contains("QualityDataset"))
+{ 
+ *@
+    <br />
+    <br />
+    <h3>Analisis del dataset del : @ViewBag.FechaArchivo</h3>
+    <pre>
+        @foreach (var linea in ViewBag.UltimasLineas)
+        {
+            @linea
+            <br />
+        }
+    </pre>
+}
+
+@section Scripts {
+    <script>
+        function showProgressBar() {
+            document.getElementById('progress-container').style.display = 'block';
+            var progress = document.getElementById('progress');
+            var value = 0;
+            var interval = setInterval(function() {
+                if (value < 100) {
+                    value += 10; // Simula el progreso
+                    progress.value = value;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 500); // Actualiza cada 500ms
+        }
+
+        function hideProgressBar() {
+            document.getElementById('progress-container').style.display = 'none';
+        }
+    </script>
+}

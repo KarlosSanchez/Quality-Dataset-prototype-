@@ -1,0 +1,33 @@
+﻿@{
+    ViewBag.Title = "Seleccionar Directorio";
+}
+
+<h2>Seleccionar Directorio</h2>
+
+<form method="post" action="/Home/ListFiles">
+    <label for="directoryPath">Ruta del Directorio:</label>
+    <input type="text" id="directoryPath" name="directoryPath" required />
+    <button type="submit">Listar Archivos</button>
+</form>
+
+@if (ViewBag.Files != null)
+{
+    <h3>Archivos en @ViewBag.DirectoryPath</h3>
+    <ul>
+        @foreach (var file in ViewBag.Files)
+        {
+            <li>
+                <a href="/Home/ReadFile?filePath=@file">@System.IO.Path.GetFileName(file)</a>&nbsp;&nbsp;&nbsp;
+                <form method="post" action="/Home/VisualizeData" style="display:inline;">
+                    <input type="hidden" name="filePath" value="@file" />
+                    <button type="submit">Visualiza Datos</button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+
+@if (ViewBag.Error != null)
+{
+    <p style="color:red;">@ViewBag.Error</p>
+}
